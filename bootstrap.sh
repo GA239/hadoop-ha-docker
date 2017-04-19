@@ -8,13 +8,13 @@ checkArg () {
     shift 1
     let "s++"
   fi
-  
+
   if [[ $1 == "-b" ]]; then
     bash=true
     shift 1
     let "s++"
   fi
-  
+
   shift=$s
 }
 
@@ -54,30 +54,23 @@ sed "s/CLUSTER_NAME/$CLUSTER_NAME/" /usr/local/hadoop/etc/hadoop/hdfs-site.xml.t
 | sed "s/JNODES/$JNODES/" \
 > /usr/local/hadoop/etc/hadoop/hdfs-site.xml
 
+ mkdir -p /mnt/hadoop/dfs/name && mkdir -p /mnt/hadoop/dfs/data && mkdir -p /mnt/hadoop/journal/data
+
 sed "s/CLUSTER_NAME/$CLUSTER_NAME/" /usr/local/hadoop/etc/hadoop/core-site.xml.template > /usr/local/hadoop/etc/hadoop/core-site.xml
 
 echo SERVER=$server CLUSTER_NAME=$CLUSTER_NAME NNODE1_IP=$NNODE1_IP NNODE2_IP=$NNODE2_IP JNODES=$JNODES ZK_IPS=$ZK_IPS
 
 if [[ $server = "format" ]]; then
-  read -p "Are you sure to format the hdfs volume? " -n 1 -r
-  echo  
-  if [[ $REPLY =~ ^[Yy]$ ]]
-  then
-    $HADOOP_PREFIX/bin/hadoop namenode -format
-    exit;
-  fi
-  exit;
+   $HADOOP_PREFIX/bin/hadoop namenode -format -nonInteractive
+   $HADOOP_PREFIX/bin/hdfs zkfc -formatZK -nonInteractive
+   exit
 fi
 
-if [[ $server = "bootstrap" ]]; then
-  read -p "Are you sure to bootstrap the hdfs volume? " -n 1 -r
-  echo  
-  if [[ $REPLY =~ ^[Yy]$ ]]
-  then
-    $HADOOP_PREFIX/bin/hadoop namenode -bootstrapStandby
-    exit;
-  fi
-  exit;
+if [[ $server = "standby" ]]; then
+   # instead of bootstrapStandby command, we just copy over the data from the mounted directory, which comes from nn1 and exit.
+   # Be sure to mount the nn1 volume
+   cp -r /mnt/shared/nn1/dfs/name/* /mnt/hadoop/dfs/name/
+   exit
 fi
 
 if [[ $server != "none" ]]; then
@@ -89,20 +82,23 @@ if [[ $server != "none" ]]; then
   fi
 fi
 
+# press CTRL-C to exit the container
+trap 'exit' INT
+
 # Auto exit when the needed processes are not running
 if [[ $keeprunning = true ]]; then
   while true; do
     # Only auto close when the daemon is not running. Else it could be a controlled stop
     if [[ -z $(pgrep -f hadoop-daemon.sh) ]]; then
       if [[ $server = "namenode" ]]; then
-        if [[ -z $(pgrep -f NameNode) ]]; then echo NameNode not running; $HADOOP_PREFIX/sbin/hadoop-daemon.sh stop zkfc; exit 0; fi 
-        if [[ -z $(pgrep -f DFSZKFailoverController) ]]; then echo ZKFC not running; $HADOOP_PREFIX/sbin/hadoop-daemon.sh stop namenode; exit 0; fi 
+        if [[ -z $(pgrep -f NameNode) ]]; then echo NameNode not running; $HADOOP_PREFIX/sbin/hadoop-daemon.sh stop zkfc; exit 1; fi
+        if [[ -z $(pgrep -f DFSZKFailoverController) ]]; then echo ZKFC not running; $HADOOP_PREFIX/sbin/hadoop-daemon.sh stop namenode; exit 1; fi
       elif [[ $server = "datanode" ]]; then
-        if [[ -z $(pgrep -f DataNode) ]]; then echo DataNode not running; exit 0; fi 
+        if [[ -z $(pgrep -f DataNode) ]]; then echo DataNode not running; exit 1; fi
       elif [[ $server = "journalnode" ]]; then
-        if [[ -z $(pgrep -f JournalNode) ]]; then echo JournalNode not running; exit 0; fi 
+        if [[ -z $(pgrep -f JournalNode) ]]; then echo JournalNode not running; exit 1; fi
       fi
-    else 
+    else
       echo Hadoop daemon running
     fi
     sleep 3;
