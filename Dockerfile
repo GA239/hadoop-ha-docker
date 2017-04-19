@@ -1,13 +1,13 @@
-FROM dockerfile/java:oracle-java8
+FROM williamyeh/java8
 
-RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./hadoop-2.7.3 hadoop
+VOLUME /mnt/hadoop/
 
 RUN apt-get update \
-  && apt-get install bash \
-  && apt-get install jq
-
-ENV USER root
+  && apt-get install -y jq curl \
+  && curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz | tar -xz -C /usr/local/ \
+  && cd /usr/local \
+  && ln -s ./hadoop-2.7.3 hadoop \
+  && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 
@@ -21,21 +21,13 @@ ENV YARN_CONF_DIR $HADOOP_PREFIX/etc/hadoop
 
 WORKDIR /usr/local/hadoop
 
-RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/lib/jvm/java-8-oracle\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
-RUN sed -i '/^export HADOOP_CONF_DIR/ s:.*:export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
+RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/lib/jvm/java-8-oracle\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh  \
+  && sed -i '/^export HADOOP_CONF_DIR/ s:.*:export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh \
+  && chmod +x /usr/local/hadoop/etc/hadoop/*-env.sh
 
-RUN chmod +x /usr/local/hadoop/etc/hadoop/*-env.sh
+COPY core-site.xml.template hdfs-site.xml.template /usr/local/hadoop/etc/hadoop/
 
-RUN mkdir -p /mnt/hadoop/dfs/name && mkdir -p /mnt/hadoop/dfs/data && mkdir -p /mnt/hadoop/journal/data
-
-ADD core-site.xml.template /usr/local/hadoop/etc/hadoop/core-site.xml.template
-ADD hdfs-site.xml.template /usr/local/hadoop/etc/hadoop/hdfs-site.xml.template
-
-ADD bootstrap.sh /etc/bootstrap.sh
-RUN chown root:root /etc/bootstrap.sh && chmod a+x /etc/bootstrap.sh
-
-ADD fence.sh /etc/fence.sh
-RUN chown root:root /etc/fence.sh && chmod a+x /etc/fence.sh
+COPY bootstrap.sh fence.sh /etc/
 
 CMD ["/etc/bootstrap.sh", "-d"]
 
