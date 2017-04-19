@@ -1,8 +1,8 @@
 jurmous/hadoop is Hadoop distributed storage engine packaged in lightweight docker and configured in a way to easily run it distributed with High Availability.
 
 # Package details
-* Java 7 (The latest from java:7 as base container)
-* Hadoop 2.5.2
+* Java 8
+* Hadoop 2.7.3
 * Bash
 * No extra packaged OS to be lighter.
 

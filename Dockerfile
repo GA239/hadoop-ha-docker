@@ -1,16 +1,15 @@
-# Hadoop image
-FROM java:7
-MAINTAINER jurmous
+FROM dockerfile/java:oracle-java8
 
-RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.5.2/hadoop-2.5.2.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./hadoop-2.5.2 hadoop
+RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz | tar -xz -C /usr/local/
+RUN cd /usr/local && ln -s ./hadoop-2.7.3 hadoop
 
 RUN apt-get update \
   && apt-get install bash \
   && apt-get install jq
 
 ENV USER root
-ENV JAVA_HOME /usr/lib/jvm/java-1.7.0-openjdk-amd64
+
+ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 
 ENV HADOOP_PREFIX /usr/local/hadoop
 ENV HADOOP_COMMON_HOME /usr/local/hadoop
@@ -22,7 +21,7 @@ ENV YARN_CONF_DIR $HADOOP_PREFIX/etc/hadoop
 
 WORKDIR /usr/local/hadoop
 
-RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
+RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/lib/jvm/java-8-oracle\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 RUN sed -i '/^export HADOOP_CONF_DIR/ s:.*:export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 
 RUN chmod +x /usr/local/hadoop/etc/hadoop/*-env.sh
