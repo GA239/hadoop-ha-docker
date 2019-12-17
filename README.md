@@ -27,11 +27,11 @@ docker run -d --name=jn-1 -e "NNODE1_IP=nn1" -e "NNODE2_IP=nn2" -e "JN_IPS=jn-1:
 4. Start hosts NameNodes (separate terminals)  
   * first
     ```
-    docker run --hostname=nn1 -p 50060:50070 --name=nn1 -it -e "NNODE1_IP=nn1" -e "NNODE2_IP=nn2" -e "JN_IPS=jn-1:8485" -e "ZK_IPS=zk-1:2181" --net=hadoop -v /tmp/hadoop-nn1:/mnt/hadoop tbont/hadoop-ha-docker bash
+    docker run --hostname=nn1 --name=nn1 -it -e "NNODE1_IP=nn1" -e "NNODE2_IP=nn2" -e "JN_IPS=jn-1:8485" -e "ZK_IPS=zk-1:2181" --net=hadoop -v /tmp/hadoop-nn1:/mnt/hadoop tbont/hadoop-ha-docker bash
     ```
   * second
     ```
-    docker run --hostname=nn2 -p 50060:50070 --name=nn2 -it -e "NNODE1_IP=nn1" -e "NNODE2_IP=nn2" -e "JN_IPS=jn-1:8485" -e "ZK_IPS=zk-1:2181" --net=hadoop -v /tmp/hadoop-nn2:/mnt/hadoop -v /tmp/hadoop-nn1:/mnt/shared/nn1 tbont/hadoop-ha-docker bash
+    docker run --hostname=nn2 --name=nn2 -it -e "NNODE1_IP=nn1" -e "NNODE2_IP=nn2" -e "JN_IPS=jn-1:8485" -e "ZK_IPS=zk-1:2181" --net=hadoop -v /tmp/hadoop-nn2:/mnt/hadoop -v /tmp/hadoop-nn1:/mnt/shared/nn1 tbont/hadoop-ha-docker bash
     ```  
 
 5. Format the active NameNode and Sync the initial state to the standby NameNode (separate terminals)
@@ -57,7 +57,7 @@ At this point both volumes hold the initial cluster state and can be used as a m
     /etc/bootstrap.sh -d namenode
     ```
 
-Now both NameNodes should be running, check it by visiting the WebUI on Port 50060 (nn1) and 50070 (nn2). nn2 should be `standby` while nn1 is `active`.
+Now both NameNodes should be running, check it with command `root@nn2:/usr/local/hadoop/bin# bash hdfs haadmin -getServiceState nn1`. nn2 should be `standby` while nn1 is `active`.
 
 7. Start DataNodes (separate terminals)
   * first (in ```root@nn1:/```)
@@ -71,8 +71,7 @@ Now both NameNodes should be running, check it by visiting the WebUI on Port 500
 
 8. Kill the active NameNode to trigger failover
 
-Just press CTRL-C on the terminal which is attached to the active NameNode. Now watch on the WebUI how the standby NameNode gets active.  
-DataNodes are still connected. Wait a bit and restart the formerly active NameNode. Now it will be the standby Node.
+Just press CTRL-C on the terminal which is attached to the active NameNode. DataNodes are still connected. Wait a bit and check it with command `root@nn2:/usr/local/hadoop/bin# bash hdfs haadmin -getServiceState nn1`. nn2 should be `active` while nn1 is `"nn1":8020; java.net.UnknownHostException`.
 
 ## Extra bootstrap parameters
 * ```-d``` - Runs the service continuously instead of auto quiting
